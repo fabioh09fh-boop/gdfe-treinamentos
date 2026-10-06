@@ -289,19 +289,28 @@
           dadosGlobais = rawData.map(item => {
             let obj = {};
             Object.keys(item).forEach(k => {
-              // Mapeia removendo BOM e espaços extras das chaves reais do CSV
-              let chaveLimpa = k.trim().replace(/^[\uFEFF\xA0]+/, '').toLowerCase();
+              // Limpa BOM, espaços e caracteres especiais invisíveis (\xa0) das chaves
+              let chaveLimpa = k.trim().replace(/^[\uFEFF\xA0]+/, '').replace(/\s+/g, ' ').toLowerCase();
               obj[chaveLimpa] = item[k];
             });
 
-            // Correspondência exata com as colunas do seu CSV:
+            // Captura flexível considerando variações de espaços e acentos nas chaves reais do CSV:
             let valAno = obj['ano'] || 0;
             let valData = obj['data inicial'] || obj['período'] || '';
             let valNucleo = obj['núcleo'] || 'Não informado';
             let valProjeto = obj['programa/projeto'] || 'Não informado';
             let valFormato = obj['formato'] || 'Não informado';
             let valAcao = obj['tema'] || 'Não informada';
-            let valCargo = obj['público alvo'] || 'Não informado';
+            
+            // Busca segura pela coluna de público alvo (lidando com \xa0 / espaço não separável)
+            let valCargo = 'Não informado';
+            for (let chave in obj) {
+              if (chave.replace(/\s+/g, '').includes('públicoalvo') || chave.replace(/\s+/g, '').includes('publicoalvo')) {
+                valCargo = obj[chave];
+                break;
+              }
+            }
+
             let valPub = obj['nº de participantes'] || 0;
             let valLocal = obj['local'] || 'Não informado';
             let valInv = obj['valor cachê'] || 0;
@@ -313,7 +322,7 @@
               projeto: String(valProjeto),
               formato: String(valFormato),
               acao: String(valAcao),
-              cargo: String(valCargo),
+              cargo: String(valCargo || 'Não informado'),
               publico: parseInt(limparNumero(valPub)) || 0,
               local: String(valLocal),
               investimento: parseFloat(limparNumero(valInv)) || 0.0
@@ -533,7 +542,7 @@
         n[d.nucleo] = (n[d.nucleo] || 0) + 1;
         p[d.projeto] = (p[d.projeto] || 0) + 1;
         
-        if (d.cargo) {
+        if (d.cargo && d.cargo !== 'Não informado') {
           d.cargo.split(/,|\//).forEach(cargoItem => {
             let cLimpo = cargoItem.trim().replace(/[\u200b-\u200d\ufeff]/g, '');
             if (cLimpo) c[cLimpo] = (c[cLimpo] || 0) + 1;
