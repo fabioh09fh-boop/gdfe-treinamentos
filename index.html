@@ -189,7 +189,7 @@
 
     <div class="kpi-grid">
       <div class="kpi-card">
-        <h3>Investimento Total</h3>
+        <h3>Investimento (Cachê)</h3>
         <p class="valor" id="totalInvestimento">R$ 0,00</p>
         <span class="kpi-tag">Recursos Aplicados</span>
       </div>
@@ -215,11 +215,11 @@
         <div class="canvas-container" id="containerProjetos"><canvas id="graficoProjetos"></canvas></div>
       </div>
       <div class="chart-box" style="grid-column: 1 / -1;">
-        <h3>Volume de Ações por Cargo / Público Alvo</h3>
+        <h3>Volume de Ações por Público Alvo</h3>
         <div class="canvas-container" id="containerCargos"><canvas id="graficoCargos"></canvas></div>
       </div>
       <div class="chart-box" style="grid-column: 1 / -1;">
-        <h3>Realizações por Unidade / Local (Estratégico)</h3>
+        <h3>Realizações por Local / Unidade (Estratégico)</h3>
         <div class="canvas-container" id="containerUnidades"><canvas id="graficoUnidades"></canvas></div>
       </div>
     </div>
@@ -241,12 +241,12 @@
               <th>Data / Ano</th>
               <th>Núcleo</th>
               <th>Projeto</th>
-              <th>Ação</th>
-              <th>Cargo / Público</th>
+              <th>Ação (Tema)</th>
+              <th>Público Alvo</th>
               <th>Formato</th>
               <th>Participantes</th>
               <th>Local / Unidade</th>
-              <th>Investimento</th>
+              <th>Valor / Cachê</th>
             </tr>
           </thead>
           <tbody id="tabelaCorpo"></tbody>
@@ -289,32 +289,22 @@
           dadosGlobais = rawData.map(item => {
             let obj = {};
             Object.keys(item).forEach(k => {
-              obj[k.trim().toLowerCase()] = item[k];
+              // Mapeia removendo BOM e espaços extras das chaves reais do CSV
+              let chaveLimpa = k.trim().replace(/^[\uFEFF\xA0]+/, '').toLowerCase();
+              obj[chaveLimpa] = item[k];
             });
 
-            // Procura chaves dinamicamente para evitar falhas se os nomes mudarem levemente
-            let valAno = obj.ano || obj.year || obj['ano de referência'] || 0;
-            let valData = obj.data || obj.date || obj['período'] || '';
-            let valNucleo = obj.nucleo || obj['núcleo'] || obj['núcleo de desenvolvimento'] || 'Não informado';
-            let valProjeto = obj.projeto || obj['programa / projeto'] || obj['programa'] || 'Não informado';
-            let valFormato = obj.formato || obj.modalidade || obj['formato / modalidade'] || 'Não informado';
-            let valAcao = obj.acao || obj['ação'] || obj['nome da ação'] || 'Não informada';
-            let valCargo = obj.cargo || obj['cargo / público alvo'] || obj['público-alvo'] || 'Não informado';
-            
-            // Procura colunas de participantes ou investimento independente do nome exato
-            let rawPub = 0;
-            let rawInv = 0;
-
-            Object.keys(obj).forEach(k => {
-              if (k.includes('publico') || k.includes('participantes') || k.includes('inscritos') || k.includes('pessoas')) {
-                if (!rawPub) rawPub = obj[k];
-              }
-              if (k.includes('investimento') || k.includes('valor') || k.includes('custo') || k.includes('recurso') || k.includes('orçamento')) {
-                if (!rawInv) rawInv = obj[k];
-              }
-            });
-
-            let valLocal = obj.local || obj.unidade || obj['local / unidade'] || obj['unidade / local'] || 'Não informado';
+            // Correspondência exata com as colunas do seu CSV:
+            let valAno = obj['ano'] || 0;
+            let valData = obj['data inicial'] || obj['período'] || '';
+            let valNucleo = obj['núcleo'] || 'Não informado';
+            let valProjeto = obj['programa/projeto'] || 'Não informado';
+            let valFormato = obj['formato'] || 'Não informado';
+            let valAcao = obj['tema'] || 'Não informada';
+            let valCargo = obj['público alvo'] || 'Não informado';
+            let valPub = obj['nº de participantes'] || 0;
+            let valLocal = obj['local'] || 'Não informado';
+            let valInv = obj['valor cachê'] || 0;
 
             return {
               ano: parseInt(valAno) || 0,
@@ -324,9 +314,9 @@
               formato: String(valFormato),
               acao: String(valAcao),
               cargo: String(valCargo),
-              publico: parseInt(limparNumero(rawPub)) || 0,
+              publico: parseInt(limparNumero(valPub)) || 0,
               local: String(valLocal),
-              investimento: parseFloat(limparNumero(rawInv)) || 0.0
+              investimento: parseFloat(limparNumero(valInv)) || 0.0
             };
           }).filter(d => d.ano > 0);
 
