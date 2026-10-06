@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GDFE - Painel de Ações de Desenvolvimento 2022 - 2027</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -256,9 +257,7 @@
   </div>
 
   <script>
-    const spreadsheetId = '2PACX-1vTjIvXC4vi_cBUGQwC9hovavZB1dam7duVXrzcmsmXwBniHOfgkvpFNmg3LaC3HlSPayswKznEtVRec';
-    const gid = '1454707644';
-    const jsonUrl = `https://docs.google.com/spreadsheets/d/e/${spreadsheetId}/gviz/tq?gid=${gid}&pub=true`;
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTjIvXC4vi_cBUGQwC9hovavZB1dam7duVXrzcmsmXwBniHOfgkvpFNmg3LaC3HlSPayswKznEtVRec/pub?gid=1454707644&single=true&output=csv';
 
     let dadosGlobais = [];
     let charts = {};
@@ -268,44 +267,42 @@
       return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    async function carregarDadosPlanilha() {
-      try {
-        const response = await fetch(jsonUrl);
-        const text = await response.text();
-        
-        const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/s);
-        if (!jsonMatch) throw new Error('Formato de resposta inválido');
-        
-        const json = JSON.parse(jsonMatch[1]);
-        const cols = json.table.cols.map(c => (c.label || '').trim().toLowerCase());
-        const rows = json.table.rows;
+    function carregarDadosPlanilha() {
+      Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const rawData = results.data;
+          
+          dadosGlobais = rawData.map(item => {
+            // Normaliza as chaves do objeto para minúsculas para evitar erros de maiúsculas/minúsculas
+            let obj = {};
+            Object.keys(item).forEach(k => {
+              obj[k.trim().toLowerCase()] = item[k];
+            });
 
-        dadosGlobais = rows.map(r => {
-          let obj = {};
-          cols.forEach((colName, index) => {
-            let cell = r.c[index];
-            obj[colName] = cell && cell.v !== null ? cell.v : '';
-          });
+            return {
+              ano: parseInt(obj.ano || obj.year || 0) || 0,
+              data: String(obj.data || obj.date || ''),
+              nucleo: String(obj.nucleo || obj['núcleo'] || 'Não informado'),
+              projeto: String(obj.projeto || 'Não informado'),
+              formato: String(obj.formato || obj.modalidade || 'Não informado'),
+              acao: String(obj.acao || obj['ação'] || 'Não informada'),
+              cargo: String(obj.cargo || 'Não informado'),
+              publico: parseInt(String(obj.publico || obj.participantes || '0').replace(/\./g, '')) || 0,
+              local: String(obj.local || obj.unidade || 'Não informado'),
+              investimento: parseFloat(String(obj.investimento || obj.valor || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0.0
+            };
+          }).filter(d => d.ano > 0);
 
-          return {
-            ano: parseInt(obj.ano || obj.year || 0) || 0,
-            data: String(obj.data || obj.date || ''),
-            nucleo: String(obj.nucleo || obj['núcleo'] || 'Não informado'),
-            projeto: String(obj.projeto || 'Não informado'),
-            formato: String(obj.formato || obj.modalidade || 'Não informado'),
-            acao: String(obj.acao || obj['ação'] || 'Não informada'),
-            cargo: String(obj.cargo || 'Não informado'),
-            publico: parseInt(obj.publico || obj.participantes || 0) || 0,
-            local: String(obj.local || obj.unidade || 'Não informado'),
-            investimento: parseFloat(String(obj.investimento || obj.valor || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0.0
-          };
-        }).filter(d => d.ano > 0);
-
-        popularFiltrosDinamicos();
-        atualizarPainel();
-      } catch (error) {
-        console.error('Erro ao carregar dados do Google Sheets:', error);
-      }
+          popularFiltrosDinamicos();
+          atualizarPainel();
+        },
+        error: function(err) {
+          console.error('Erro ao descarregar CSV:', err);
+        }
+      });
     }
 
     function toggleAnoDropdown() {
