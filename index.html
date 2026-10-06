@@ -267,6 +267,17 @@
       return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
+    function limparNumero(valorStr) {
+      if (!valorStr) return 0;
+      let limpo = String(valorStr).replace(/[^\d,.-]/g, '');
+      if (limpo.includes(',')) {
+        limpo = limpo.replace(/\./g, '').replace(',', '.');
+      } else {
+        limpo = limpo.replace(/,/g, '');
+      }
+      return parseFloat(limpo) || 0;
+    }
+
     function carregarDadosPlanilha() {
       Papa.parse(csvUrl, {
         download: true,
@@ -276,23 +287,46 @@
           const rawData = results.data;
           
           dadosGlobais = rawData.map(item => {
-            // Normaliza as chaves do objeto para minúsculas para evitar erros de maiúsculas/minúsculas
             let obj = {};
             Object.keys(item).forEach(k => {
               obj[k.trim().toLowerCase()] = item[k];
             });
 
+            // Procura chaves dinamicamente para evitar falhas se os nomes mudarem levemente
+            let valAno = obj.ano || obj.year || obj['ano de referência'] || 0;
+            let valData = obj.data || obj.date || obj['período'] || '';
+            let valNucleo = obj.nucleo || obj['núcleo'] || obj['núcleo de desenvolvimento'] || 'Não informado';
+            let valProjeto = obj.projeto || obj['programa / projeto'] || obj['programa'] || 'Não informado';
+            let valFormato = obj.formato || obj.modalidade || obj['formato / modalidade'] || 'Não informado';
+            let valAcao = obj.acao || obj['ação'] || obj['nome da ação'] || 'Não informada';
+            let valCargo = obj.cargo || obj['cargo / público alvo'] || obj['público-alvo'] || 'Não informado';
+            
+            // Procura colunas de participantes ou investimento independente do nome exato
+            let rawPub = 0;
+            let rawInv = 0;
+
+            Object.keys(obj).forEach(k => {
+              if (k.includes('publico') || k.includes('participantes') || k.includes('inscritos') || k.includes('pessoas')) {
+                if (!rawPub) rawPub = obj[k];
+              }
+              if (k.includes('investimento') || k.includes('valor') || k.includes('custo') || k.includes('recurso') || k.includes('orçamento')) {
+                if (!rawInv) rawInv = obj[k];
+              }
+            });
+
+            let valLocal = obj.local || obj.unidade || obj['local / unidade'] || obj['unidade / local'] || 'Não informado';
+
             return {
-              ano: parseInt(obj.ano || obj.year || 0) || 0,
-              data: String(obj.data || obj.date || ''),
-              nucleo: String(obj.nucleo || obj['núcleo'] || 'Não informado'),
-              projeto: String(obj.projeto || 'Não informado'),
-              formato: String(obj.formato || obj.modalidade || 'Não informado'),
-              acao: String(obj.acao || obj['ação'] || 'Não informada'),
-              cargo: String(obj.cargo || 'Não informado'),
-              publico: parseInt(String(obj.publico || obj.participantes || '0').replace(/\./g, '')) || 0,
-              local: String(obj.local || obj.unidade || 'Não informado'),
-              investimento: parseFloat(String(obj.investimento || obj.valor || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0.0
+              ano: parseInt(valAno) || 0,
+              data: String(valData),
+              nucleo: String(valNucleo),
+              projeto: String(valProjeto),
+              formato: String(valFormato),
+              acao: String(valAcao),
+              cargo: String(valCargo),
+              publico: parseInt(limparNumero(rawPub)) || 0,
+              local: String(valLocal),
+              investimento: parseFloat(limparNumero(rawInv)) || 0.0
             };
           }).filter(d => d.ano > 0);
 
@@ -450,7 +484,7 @@
             <td>${d.acao}</td>
             <td>${d.cargo}</td>
             <td><span class="badge-formato">${d.formato}</span></td>
-            <td>${d.publico}</td>
+            <td>${d.publico.toLocaleString('pt-BR')}</td>
             <td>${d.local}</td>
             <td class="valor-coluna">${formatarMoeda(d.investimento)}</td>
           </tr>`;
