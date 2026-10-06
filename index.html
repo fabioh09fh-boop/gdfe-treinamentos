@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDFE - Painel de Ações de Desenvolvimento 2022 - 2027</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #1a2847;
+      --bg-card: #24344d;
+      --bg-element: #324666;
+      --border-color: #3b4f6e;
+      --accent-orange: #f97316;
+      --accent-orange-hover: #ea580c;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .dashboard-container {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      padding: 40px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+    .dashboard-title-box {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      padding: 26px 32px;
+      border-radius: 16px;
+      margin-bottom: 30px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+    }
+    .dashboard-title-box h2 { margin: 0; font-size: 30px; font-weight: 700; color: #ffffff !important; }
+    
+    .filters-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+      background: linear-gradient(145deg, #1f2f4f, #18253f);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid #c2410c;
+      align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; }
+    .filter-group label { color: #fed7aa; font-size: 11px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+    .filter-group select, .multi-select-btn {
+      background-color: var(--bg-element);
+      color: var(--text-main);
+      border: 1px solid #f97316;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      height: 42px;
+      cursor: pointer;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .multi-select-container { position: relative; }
+    .multi-select-content {
+      display: none;
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background-color: var(--bg-element);
+      border: 1px solid #f97316;
+      border-radius: 14px;
+      margin-top: 6px;
+      padding: 12px;
+      z-index: 100;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .multi-select-content label { display: flex; align-items: center; gap: 8px; color: var(--text-main); font-size: 12px; margin-bottom: 8px; cursor: pointer; text-transform: none; }
+    
+    .btn-limpar {
+      background-color: #c2410c;
+      color: #ffffff;
+      border: 1px solid #f97316;
+      padding: 10px 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      height: 42px;
+      transition: background 0.2s;
+    }
+    .btn-limpar:hover { background-color: #ea580c; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+    .kpi-card { background: var(--bg-main); padding: 24px; border-radius: 14px; border: 1px solid var(--border-color); border-left: 4px solid var(--accent-orange); position: relative; }
+    .kpi-card h3 { color: var(--text-muted); font-size: 12px; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; }
+    .kpi-card .valor { color: var(--text-main); font-size: 24px; font-weight: 700; margin: 0 0 6px 0; }
+    .kpi-tag { font-size: 10px; color: var(--accent-blue); background: rgba(56, 189, 248, 0.1); padding: 2px 8px; border-radius: 6px; display: inline-block; }
+    
+    .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 30px; }
+    .chart-box { background: var(--bg-main); padding: 24px; border-radius: 14px; border: 1px solid var(--border-color); }
+    .chart-box h3 { color: var(--text-main); font-size: 14px; font-weight: 600; margin-top: 0; margin-bottom: 20px; text-align: center; }
+    .canvas-container { position: relative; height: 280px; width: 100%; transition: height 0.3s ease; }
+    
+    .timeline-container { background: var(--bg-main); padding: 30px 24px; border-radius: 14px; border: 1px solid var(--border-color); margin-bottom: 30px; }
+    .timeline-container h3 { color: var(--text-main); font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 25px; }
+    .timeline-wrapper { position: relative; padding-left: 30px; max-height: 500px; overflow-y: auto; padding-right: 10px; }
+    .timeline-wrapper::before { content: ''; position: absolute; left: 9px; top: 5px; bottom: 5px; width: 3px; background: linear-gradient(to bottom, #f97316, #38bdf8, #34d399); border-radius: 2px; }
+    .timeline-item { position: relative; margin-bottom: 24px; }
+    .timeline-dot { position: absolute; left: -30px; top: 14px; width: 13px; height: 13px; border-radius: 50%; background-color: var(--accent-orange); border: 3px solid var(--bg-card); }
+    .timeline-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 18px 20px; border-radius: 12px; }
+    .timeline-header-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+    .timeline-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin: 0; }
+    .badge-data { background-color: rgba(249, 115, 22, 0.15); color: #fed7aa; border: 1px solid rgba(249, 115, 22, 0.3); padding: 2px 8px; border-radius: 6px; font-size: 11px; }
+    .timeline-details { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; margin-top: 6px; }
+    
+    .table-container { background: var(--bg-main); padding: 24px; border-radius: 14px; border: 1px solid var(--border-color); }
+    .table-scroll-wrapper { max-height: 450px; overflow-y: auto; border-radius: 10px; border: 1px solid var(--border-color); }
+    .table-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .table-container h3 { color: var(--text-main); font-size: 16px; font-weight: 600; margin: 0; }
+    .table-counter { background-color: var(--bg-element); color: #fed7aa; font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 1px solid #c2410c; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
+    th { background: linear-gradient(135deg, #c2410c, #9a3412); color: #ffffff; text-transform: uppercase; font-size: 11px; font-weight: 700; position: sticky; top: 0; z-index: 10; }
+    tr:hover { background-color: rgba(249, 115, 22, 0.08); }
+    .badge-ano { background-color: var(--bg-element); color: #f8fafc; padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; }
+    .badge-formato { background-color: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-size: 11px; }
+    .valor-coluna { color: #34d399; font-weight: 600; }
+    tfoot tr { background-color: rgba(36, 52, 77, 0.95); }
+    tfoot td { font-weight: 700; color: #fed7aa; border-top: 2px solid var(--accent-orange); position: sticky; bottom: 0; z-index: 10; }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <div class="dashboard-title-box">
+      <h2>GDFE - Painel de Ações de Desenvolvimento 2022 - 2027</h2>
+    </div>
+
+    <div class="filters-container">
+      <div class="filter-group">
+        <label>Ano (Múltipla Escolha):</label>
+        <div class="multi-select-container">
+          <div class="multi-select-btn" onclick="toggleAnoDropdown()">
+            <span id="anoDropdownLabel">Todos os Anos</span> ▾
+          </div>
+          <div class="multi-select-content" id="anoDropdownContent">
+            <label><input type="checkbox" id="chkTodosAnos" value="todos" checked onchange="handleAnoSelectAll(this)"> <strong>Todos os Anos</strong></label>
+            <div id="anosCheckboxesContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="filtroNucleo">Núcleo:</label>
+        <select id="filtroNucleo" onchange="atualizarPainel()">
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filtroProjeto">Programa / Projeto:</label>
+        <select id="filtroProjeto" onchange="atualizarPainel()">
+          <option value="todos">Todos os Projetos</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filtroUnidade">Unidade / Local:</label>
+        <select id="filtroUnidade" onchange="atualizarPainel()">
+          <option value="todos">Todas</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <button class="btn-limpar" onclick="limparFiltros()">Limpar Filtros</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <h3>Investimento Total</h3>
+        <p class="valor" id="totalInvestimento">R$ 0,00</p>
+        <span class="kpi-tag">Recursos Aplicados</span>
+      </div>
+      <div class="kpi-card">
+        <h3>Total Geral de Ações</h3>
+        <p class="valor" id="totalAcoes">0</p>
+        <span class="kpi-tag">Cronograma Plurianual</span>
+      </div>
+      <div class="kpi-card" style="border-left-color: #34d399;">
+        <h3>Participantes (Público)</h3>
+        <p class="valor" id="totalPublico">0</p>
+        <span class="kpi-tag">Alcance</span>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h3>Volume de Ações por Núcleo</h3>
+        <div class="canvas-container" id="containerNucleos"><canvas id="graficoNucleos"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Ações por Programa / Projeto</h3>
+        <div class="canvas-container" id="containerProjetos"><canvas id="graficoProjetos"></canvas></div>
+      </div>
+      <div class="chart-box" style="grid-column: 1 / -1;">
+        <h3>Volume de Ações por Cargo / Público Alvo</h3>
+        <div class="canvas-container" id="containerCargos"><canvas id="graficoCargos"></canvas></div>
+      </div>
+      <div class="chart-box" style="grid-column: 1 / -1;">
+        <h3>Realizações por Unidade / Local (Estratégico)</h3>
+        <div class="canvas-container" id="containerUnidades"><canvas id="graficoUnidades"></canvas></div>
+      </div>
+    </div>
+
+    <div class="timeline-container">
+      <h3>Linha do Tempo Cronológica das Ações</h3>
+      <div class="timeline-wrapper" id="timelineContent"></div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header-flex">
+        <h3>Detalhamento Analítico das Ações</h3>
+        <span class="table-counter" id="contadorLinhas">Exibindo 0 ações</span>
+      </div>
+      <div class="table-scroll-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data / Ano</th>
+              <th>Núcleo</th>
+              <th>Projeto</th>
+              <th>Ação</th>
+              <th>Cargo / Público</th>
+              <th>Formato</th>
+              <th>Participantes</th>
+              <th>Local / Unidade</th>
+              <th>Investimento</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaCorpo"></tbody>
+          <tfoot id="tabelaRodape"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const spreadsheetId = '2PACX-1vTjIvXC4vi_cBUGQwC9hovavZB1dam7duVXrzcmsmXwBniHOfgkvpFNmg3LaC3HlSPayswKznEtVRec';
+    const gid = '1454707644';
+    const jsonUrl = `https://docs.google.com/spreadsheets/d/e/${spreadsheetId}/gviz/tq?gid=${gid}&pub=true`;
+
+    let dadosGlobais = [];
+    let charts = {};
+    let anoDropdownOpen = false;
+
+    function formatarMoeda(valor) {
+      return (valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    async function carregarDadosPlanilha() {
+      try {
+        const response = await fetch(jsonUrl);
+        const text = await response.text();
+        
+        const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/s);
+        if (!jsonMatch) throw new Error('Formato de resposta inválido');
+        
+        const json = JSON.parse(jsonMatch[1]);
+        const cols = json.table.cols.map(c => (c.label || '').trim().toLowerCase());
+        const rows = json.table.rows;
+
+        dadosGlobais = rows.map(r => {
+          let obj = {};
+          cols.forEach((colName, index) => {
+            let cell = r.c[index];
+            obj[colName] = cell && cell.v !== null ? cell.v : '';
+          });
+
+          return {
+            ano: parseInt(obj.ano || obj.year || 0) || 0,
+            data: String(obj.data || obj.date || ''),
+            nucleo: String(obj.nucleo || obj['núcleo'] || 'Não informado'),
+            projeto: String(obj.projeto || 'Não informado'),
+            formato: String(obj.formato || obj.modalidade || 'Não informado'),
+            acao: String(obj.acao || obj['ação'] || 'Não informada'),
+            cargo: String(obj.cargo || 'Não informado'),
+            publico: parseInt(obj.publico || obj.participantes || 0) || 0,
+            local: String(obj.local || obj.unidade || 'Não informado'),
+            investimento: parseFloat(String(obj.investimento || obj.valor || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0.0
+          };
+        }).filter(d => d.ano > 0);
+
+        popularFiltrosDinamicos();
+        atualizarPainel();
+      } catch (error) {
+        console.error('Erro ao carregar dados do Google Sheets:', error);
+      }
+    }
+
+    function toggleAnoDropdown() {
+      const content = document.getElementById('anoDropdownContent');
+      anoDropdownOpen = !anoDropdownOpen;
+      content.style.display = anoDropdownOpen ? 'block' : 'none';
+    }
+
+    window.addEventListener('click', function(e) {
+      if (!e.target.closest('.multi-select-container')) {
+        document.getElementById('anoDropdownContent').style.display = 'none';
+        anoDropdownOpen = false;
+      }
+    });
+
+    function popularFiltrosDinamicos() {
+      const anosSet = [...new Set(dadosGlobais.map(d => d.ano))].filter(a => a > 0).sort();
+      const anosContainer = document.getElementById('anosCheckboxesContainer');
+      anosContainer.innerHTML = '';
+      anosSet.forEach(ano => {
+        anosContainer.innerHTML += `<label><input type="checkbox" value="${ano}" checked onchange="atualizarPainel()"> ${ano}</label>`;
+      });
+
+      const nucleosSet = [...new Set(dadosGlobais.map(d => d.nucleo))].filter(Boolean).sort();
+      const selectNucleo = document.getElementById('filtroNucleo');
+      selectNucleo.innerHTML = '<option value="todos">Todos</option>';
+      nucleosSet.forEach(n => selectNucleo.innerHTML += `<option value="${n}">${n}</option>`);
+
+      let unidadesSet = new Set();
+      dadosGlobais.forEach(d => {
+        if (d.local) {
+          d.local.split(/,|\/|\se\s/).forEach(u => {
+            let limpo = u.trim().replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\.$/, '');
+            if (limpo && limpo.toLowerCase() !== 'e' && limpo.length > 1) unidadesSet.add(limpo);
+          });
+        }
+      });
+      const selectUnidade = document.getElementById('filtroUnidade');
+      selectUnidade.innerHTML = '<option value="todos">Todas</option>';
+      [...unidadesSet].sort().forEach(u => selectUnidade.innerHTML += `<option value="${u}">${u}</option>`);
+    }
+
+    function handleAnoSelectAll(master) {
+      document.querySelectorAll('#anosCheckboxesContainer input').forEach(cb => cb.checked = master.checked);
+      atualizarPainel();
+    }
+
+    function obterAnosSelecionados() {
+      let sel = [];
+      document.querySelectorAll('#anosCheckboxesContainer input').forEach(cb => { if (cb.checked) sel.push(cb.value); });
+      return sel;
+    }
+
+    function popularFiltroProjetos(dadosFiltrados) {
+      const selectProjeto = document.getElementById('filtroProjeto');
+      const atual = selectProjeto.value;
+      const projetos = [...new Set(dadosFiltrados.map(d => d.projeto))].filter(Boolean).sort();
+      selectProjeto.innerHTML = '<option value="todos">Todos os Projetos</option>';
+      projetos.forEach(p => selectProjeto.innerHTML += `<option value="${p}">${p}</option>`);
+      selectProjeto.value = projetos.includes(atual) ? atual : 'todos';
+    }
+
+    function limparFiltros() {
+      const chkTodos = document.getElementById('chkTodosAnos');
+      if (chkTodos) chkTodos.checked = true;
+      document.querySelectorAll('#anosCheckboxesContainer input').forEach(cb => cb.checked = true);
+      document.getElementById('filtroNucleo').value = 'todos';
+      document.getElementById('filtroProjeto').value = 'todos';
+      document.getElementById('filtroUnidade').value = 'todos';
+      atualizarPainel();
+    }
+
+    function filtrarDados() {
+      const anos = obterAnosSelecionados();
+      const nucleo = document.getElementById('filtroNucleo').value;
+      const projeto = document.getElementById('filtroProjeto').value;
+      const unidade = document.getElementById('filtroUnidade').value;
+
+      const totalCb = document.querySelectorAll('#anosCheckboxesContainer input').length;
+      document.getElementById('anoDropdownLabel').textContent = (anos.length === totalCb || totalCb === 0) ? "Todos os Anos" : `${anos.length} Anos`;
+
+      return dadosGlobais.filter(d => {
+        let matchAno = (anos.length === 0 || anos.includes(String(d.ano)));
+        let matchNucleo = (nucleo === 'todos' || d.nucleo.includes(nucleo));
+        let matchProjeto = (projeto === 'todos' || d.projeto === projeto);
+        let matchUnidade = true;
+        if (unidade !== 'todos') {
+          let locais = d.local.split(/,|\/|\se\s/).map(u => u.trim().replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\.$/, ''));
+          matchUnidade = locais.includes(unidade);
+        }
+        return matchAno && matchNucleo && matchProjeto && matchUnidade;
+      });
+    }
+
+    function atualizarPainel() {
+      const anos = obterAnosSelecionados();
+      const nucleo = document.getElementById('filtroNucleo').value;
+      
+      let dadosParaProj = dadosGlobais.filter(d => (anos.length === 0 || anos.includes(String(d.ano))) && (nucleo === 'todos' || d.nucleo.includes(nucleo)));
+      popularFiltroProjetos(dadosParaProj);
+
+      const dadosFiltrados = filtrarDados();
+
+      let inv = dadosFiltrados.reduce((acc, d) => acc + (d.investimento || 0), 0);
+      let acoes = dadosFiltrados.length;
+      let pub = dadosFiltrados.reduce((acc, d) => acc + (d.publico || 0), 0);
+
+      document.getElementById('totalInvestimento').textContent = formatarMoeda(inv);
+      document.getElementById('totalAcoes').textContent = acoes.toLocaleString('pt-BR');
+      document.getElementById('totalPublico').textContent = pub.toLocaleString('pt-BR');
+
+      const tl = document.getElementById('timelineContent');
+      tl.innerHTML = dadosFiltrados.length === 0 ? '<p style="color:var(--text-muted);text-align:center;">Nenhuma ação encontrada.</p>' : '';
+      dadosFiltrados.forEach(d => {
+        tl.innerHTML += `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div class="timeline-header-line">
+                <h4 class="timeline-title">${d.acao || 'Ação'}</h4>
+                <div><span class="badge-data">${d.data}</span> <span class="badge-ano">${d.ano}</span></div>
+              </div>
+              <div class="timeline-details">
+                <span><strong>Núcleo:</strong> ${d.nucleo}</span>
+                <span><strong>Projeto:</strong> ${d.projeto}</span>
+                <span><strong>Local:</strong> ${d.local}</span>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      const tbody = document.getElementById('tabelaCorpo');
+      const tfoot = document.getElementById('tabelaRodape');
+      tbody.innerHTML = '';
+      let sPub = 0, sInv = 0;
+
+      dadosFiltrados.forEach(d => {
+        sPub += d.publico;
+        sInv += d.investimento;
+        tbody.innerHTML += `
+          <tr>
+            <td><span class="badge-ano">${d.ano}</span> ${d.data}</td>
+            <td>${d.nucleo}</td>
+            <td><strong>${d.projeto}</strong></td>
+            <td>${d.acao}</td>
+            <td>${d.cargo}</td>
+            <td><span class="badge-formato">${d.formato}</span></td>
+            <td>${d.publico}</td>
+            <td>${d.local}</td>
+            <td class="valor-coluna">${formatarMoeda(d.investimento)}</td>
+          </tr>`;
+      });
+
+      tfoot.innerHTML = `<tr><td colspan="6" style="text-align:right;">TOTAIS FILTRADOS:</td><td>${sPub.toLocaleString('pt-BR')} participantes</td><td>-</td><td class="valor-coluna">${formatarMoeda(sInv)}</td></tr>`;
+      document.getElementById('contadorLinhas').textContent = `Exibindo ${dadosFiltrados.length} ações`;
+
+      atualizarGraficos(dadosFiltrados);
+    }
+
+    function criarGraficoDinamico(id, containerId, labels, data, label) {
+      const container = document.getElementById(containerId);
+      const novaAltura = Math.max(250, labels.length * 28);
+      container.style.height = novaAltura + 'px';
+
+      const ctx = document.getElementById(id).getContext('2d');
+      if (charts[id]) charts[id].destroy();
+
+      const paletaBase = ['#f97316', '#38bdf8', '#34d399', '#a855f7', '#fbbf24', '#ec4899', '#6366f1', '#14b8a6'];
+      let cores = labels.map((_, i) => paletaBase[i % paletaBase.length]);
+
+      charts[id] = new Chart(ctx, {
+        type: 'bar',
+        data: { 
+          labels, 
+          datasets: [{ 
+            label, 
+            data, 
+            backgroundColor: cores,
+            borderRadius: 4
+          }] 
+        },
+        options: { 
+          indexAxis: 'y', 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false } }, 
+          scales: { 
+            x: { 
+              ticks: { color: '#94a3b8', precision: 0 }, 
+              grid: { color: '#3b4f6e' } 
+            }, 
+            y: { 
+              ticks: { color: '#f8fafc', font: { size: 11 } }, 
+              grid: { display: false } 
+            } 
+          } 
+        }
+      });
+    }
+
+    function atualizarGraficos(dados) {
+      let n = {}, p = {}, c = {}, u = {};
+      dados.forEach(d => {
+        n[d.nucleo] = (n[d.nucleo] || 0) + 1;
+        p[d.projeto] = (p[d.projeto] || 0) + 1;
+        
+        if (d.cargo) {
+          d.cargo.split(/,|\//).forEach(cargoItem => {
+            let cLimpo = cargoItem.trim().replace(/[\u200b-\u200d\ufeff]/g, '');
+            if (cLimpo) c[cLimpo] = (c[cLimpo] || 0) + 1;
+          });
+        }
+
+        if (d.local) {
+          d.local.split(/,|\/|\se\s/).forEach(loc => {
+            let limpo = loc.trim().replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\.$/, '');
+            if (limpo && limpo.toLowerCase() !== 'e' && limpo.length > 1) {
+              u[limpo] = (u[limpo] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      let ns = Object.entries(n).sort((a,b)=>b[1]-a[1]);
+      criarGraficoDinamico('graficoNucleos', 'containerNucleos', ns.map(x=>x[0]), ns.map(x=>x[1]), 'Ações');
+
+      let ps = Object.entries(p).sort((a,b)=>b[1]-a[1]);
+      criarGraficoDinamico('graficoProjetos', 'containerProjetos', ps.map(x=>x[0]), ps.map(x=>x[1]), 'Ações');
+
+      let cs = Object.entries(c).sort((a,b)=>b[1]-a[1]);
+      criarGraficoDinamico('graficoCargos', 'containerCargos', cs.map(x=>x[0]), cs.map(x=>x[1]), 'Ações');
+
+      let us = Object.entries(u).sort((a,b)=>b[1]-a[1]);
+      criarGraficoDinamico('graficoUnidades', 'containerUnidades', us.map(x=>x[0]), us.map(x=>x[1]), 'Realizações');
+    }
+
+    window.onload = function() {
+      const btn = document.createElement('button');
+      btn.id = 'themeToggle';
+      btn.innerHTML = '☀️ Claro';
+      btn.style.position = 'fixed';
+      btn.style.top = '15px';
+      btn.style.right = '15px';
+      btn.style.zIndex = '999999';
+      btn.style.background = '#f97316';
+      btn.style.color = '#ffffff';
+      btn.style.border = 'none';
+      btn.style.padding = '12px 18px';
+      btn.style.borderRadius = '25px';
+      btn.style.cursor = 'pointer';
+      btn.style.fontWeight = 'bold';
+      btn.style.boxShadow = '0 4px 10px rgba(0,0,0,.4)';
+      
+      document.body.appendChild(btn);
+      
+      let claro = false;
+      
+      btn.onclick = function () {
+        if (!claro) {
+          document.documentElement.style.setProperty('--bg-main', '#f1f5f9');
+          document.documentElement.style.setProperty('--bg-card', '#ffffff');
+          document.documentElement.style.setProperty('--bg-element', '#e2e8f0');
+          document.documentElement.style.setProperty('--border-color', '#cbd5e1');
+          document.documentElement.style.setProperty('--text-main', '#0f172a');
+          document.documentElement.style.setProperty('--text-muted', '#475569');
+          btn.innerHTML = '🌙 Escuro';
+          claro = true;
+        } else {
+          document.documentElement.style.setProperty('--bg-main', '#1a2847');
+          document.documentElement.style.setProperty('--bg-card', '#24344d');
+          document.documentElement.style.setProperty('--bg-element', '#324666');
+          document.documentElement.style.setProperty('--border-color', '#3b4f6e');
+          document.documentElement.style.setProperty('--text-main', '#f8fafc');
+          document.documentElement.style.setProperty('--text-muted', '#94a3b8');
+          btn.innerHTML = '☀️ Claro';
+          claro = false;
+        }
+      };
+
+      carregarDadosPlanilha();
+    };
+  </script>
+</body>
+</html>
