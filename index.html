@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GDFE - Painel de Ações de Desenvolvimento 2022 - 2027</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -257,7 +256,7 @@
   </div>
 
   <script>
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTjIvXC4vi_cBUGQwC9hovavZB1dam7duVXrzcmsmXwBniHOfgkvpFNmg3LaC3HlSPayswKznEtVRec/pub?gid=1454707644&single=true&output=csv';
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbxdHpUURFNpgb4hDzruZopkTR4pHhFQxsKWyq6nbZgUebyXV79-c3hhh__dHCL9NtT5ag/exec';
 
     let dadosGlobais = [];
     let charts = {};
@@ -279,22 +278,16 @@
     }
 
     function carregarDadosPlanilha() {
-      Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          const rawData = results.data;
-          
+      fetch(webAppUrl)
+        .then(response => response.json())
+        .then(rawData => {
           dadosGlobais = rawData.map(item => {
             let obj = {};
             Object.keys(item).forEach(k => {
-              // Limpa BOM, espaços e caracteres especiais invisíveis (\xa0) das chaves
               let chaveLimpa = k.trim().replace(/^[\uFEFF\xA0]+/, '').replace(/\s+/g, ' ').toLowerCase();
               obj[chaveLimpa] = item[k];
             });
 
-            // Captura flexível considerando variações de espaços e acentos nas chaves reais do CSV:
             let valAno = obj['ano'] || 0;
             let valData = obj['data inicial'] || obj['período'] || '';
             let valNucleo = obj['núcleo'] || 'Não informado';
@@ -302,7 +295,6 @@
             let valFormato = obj['formato'] || 'Não informado';
             let valAcao = obj['tema'] || 'Não informada';
             
-            // Busca segura pela coluna de público alvo (lidando com \xa0 / espaço não separável)
             let valCargo = 'Não informado';
             for (let chave in obj) {
               if (chave.replace(/\s+/g, '').includes('públicoalvo') || chave.replace(/\s+/g, '').includes('publicoalvo')) {
@@ -331,11 +323,10 @@
 
           popularFiltrosDinamicos();
           atualizarPainel();
-        },
-        error: function(err) {
-          console.error('Erro ao descarregar CSV:', err);
-        }
-      });
+        })
+        .catch(err => {
+          console.error('Erro ao descarregar dados da API:', err);
+        });
     }
 
     function toggleAnoDropdown() {
